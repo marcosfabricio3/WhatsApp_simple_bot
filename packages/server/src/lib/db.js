@@ -1,9 +1,15 @@
-import { PrismaClient } from '../generated/prisma/client.ts';
+import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
+import dotenv from 'dotenv';
 
-const libsql = createClient({ url: 'file:./prisma/dev.db'});
-const adapter = new PrismaLibSql(libsql);
+dotenv.config();
+
+const connectionString = process.env.DATABASE_URL || 'file:./prisma/dev.db';
+
+const adapter = new PrismaLibSql({
+    url: connectionString
+});
+
 const prisma = new PrismaClient({ adapter });
 
 export default prisma;
