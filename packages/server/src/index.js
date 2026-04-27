@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './lib/logger.js';
-import prisma from './lib/db.js';
+import connectWhatsApp, { connectionState } from './lib/whatsapp.js';
 
 dotenv.config();
 
@@ -19,8 +19,18 @@ app.get('/api/health', async (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.get('/api/connection/status', (req, res) => {
+    res.json(connectionState);
+})
+
+app.listen(PORT, async () => {
     logger.info(`Server running on port ${PORT}`);
+
+    try {
+        await connectWhatsApp();
+    } catch (error) {
+        logger.error('Error al iniciar WhatsApp:', error);
+    }
 });
 
 export default app;

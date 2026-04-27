@@ -4,6 +4,13 @@ import makeWASocket, {
     fetchLatestBaileysVersion
 } from 'baileys';
 import qrcode from 'qrcode-terminal';
+import logger from './logger.js';
+
+export const connectionState = {
+    status: 'connecting',
+    qr: null,
+    lastUpdate: new Date()
+};
 
 async function connectWhatsApp() {
     const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -24,19 +31,26 @@ async function connectWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
+            connectionState.qr = qr;
+            connectionState.status = 'qr_ready';
             qrcode.generate(qr, { small: true });
+            logger.info('Nuevo codigo QR generado');
         }
 
         if (connection === 'close') {
             const shouldReconnect = 
                 lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-                console.log('Conexión cerrada. Reconectando:', shouldReconnect);
+                connectionState.status = 'disconnected';
+                logger.error('Conexion cerrada. Reconectando:', shouldReconnect);
                 if(shouldReconnect) {
                     connectWhatsApp();
                 }
         }else if (connection === 'open') {
-             console.log('¡Conexión de WhatsApp abierta con éxito!');
+            connectionState.status = 'connected';
+            connectionState.qr = null;
+            logger.info('coneccion de WhatsApp abierta con exito!');
         }
+        connectionState.lastUpdate = new Date();
     });
 
     sock.ev.on('creds.update', saveCreds)

@@ -1,6 +1,5 @@
 generator client {
-    provider = "prisma-client"
-    output   = "../src/generated/prisma"
+    provider = "prisma-client-js"
 }
 
 datasource db {
@@ -8,27 +7,60 @@ datasource db {
 }
 
 model User {
-    id            String   @id @default(cuid())
-    phoneNumber   String
-    name          String
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+    id               Int               @id @default(autoincrement())
+    email            String            @unique
+    password         String
+    automations      Automation[]
+    triggers         Trigger[]
+    whatsappSession  WhatsAppSession?
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt
 }
 
-model Scheduledmessage {
-    id            String    @id @default(cuid())
-    content       String
-    recipientId   String
-    scheduledAt   DateTime
-    recurrence    DateTime @default(now())
-    sent          Boolean @default(false)
-    createdAt     DateTime @default(now())
+model Automation {
+    id               Int            @id @default(autoincrement())
+    name             String
+    messageContent   String
+    recipients       String
+    scheduleType     String
+    scheduleValue    String
+    status           String         @default("active")
+    userId           Int
+    user             User           @relation(fields: [userId], references: [id])
+    executionLogs    ExecutionLog[]
+    createdAt        DateTime       @default(now())
+    updatedAt        DateTime       @updatedAt
 }
 
-model KeywordTrigger {
-    id            String   @id @default(cuid())
-    keyword       String
-    response      String
-    chatJid       String
-    createdAt     DateTime @default(now())
+model Trigger {
+    id               Int         @id @default(autoincrement())
+    keyword          String
+    matchMode        String
+    responseMessage  String
+    chatIds          String
+    cooldown         Int     @default(60)
+    userId           Int
+    user             User    @relation(fields: [userId], references: [id])
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+}
+
+model ExecutionLog {
+    id             Int       @id @default(autoincrement())
+    automationId   Int
+    automation     Automation @relation(fields: [automationId], references: [id])
+    recipient      String
+    status         String
+    sentAt         DateTime?
+    errorMessage   String?
+    createdAt      DateTime  @default(now())
+}
+
+model WhatsAppSession {
+    id           Int      @id @default(autoincrement())
+    userId       Int      @unique
+    user         User     @relation(fields: [userId], references: [id])
+    sessionData  Bytes
+    connectedAt  DateTime?
+    updatedAt    DateTime @updatedAt
 }
