@@ -39,6 +39,8 @@ async function connectWhatsApp() {
         }
     });
 
+    sock.ev.on('creds.update', saveCreds)
+
     return sock;
 }
 
