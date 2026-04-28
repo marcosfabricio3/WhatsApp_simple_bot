@@ -1,7 +1,7 @@
 import cron from "node-cron";
-import prisma from "./db.js";
 import logger from "./logger.js";
 import { sendMessage } from "./whatsapp.js";
+import prisma from "./prisma.js";
 
 async function processMessage(content, recipientJid, userId) {
   let personalized = content;

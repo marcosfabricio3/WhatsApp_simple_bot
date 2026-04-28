@@ -1,5 +1,5 @@
-import prisma from "../lib/db.js";
 import logger from "../lib/logger.js";
+import prisma from "../lib/prisma.js";
 
 export const automationController = {
   async create(req, res) {
@@ -72,6 +72,34 @@ export const automationController = {
     } catch (error) {
       logger.error("Error al eliminar automatizacion:", error);
       res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  async updateStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const updated = await prisma.automation.update({
+        where: { id: parseInt(id) },
+        data: { status },
+      });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async getLogs(req, res) {
+    try {
+      const { automationId } = req.query;
+      const logs = await prisma.executionLog.findMany({
+        where: automationId ? { automationId: parseInt(automationId) } : {},
+        orderBy: { sentAt: "desc" },
+        take: 50,
+      });
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   },
 };

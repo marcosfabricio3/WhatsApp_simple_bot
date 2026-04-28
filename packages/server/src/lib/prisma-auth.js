@@ -1,5 +1,5 @@
 import { BufferJSON, initAuthCreds, proto } from "baileys"; // Añadido proto
-import prisma from "./db.js";
+import prisma from "./prisma.js";
 
 export const userPrismaAuthState = async (userId) => {
   // 1. Buscamos la sesión en la DB

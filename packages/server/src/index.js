@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import logger from "./lib/logger.js";
 import connectWhatsApp, { connectionState } from "./lib/whatsapp.js";
 import { automationController } from "./controllers/automation.controller.js";
+import { contactController } from "./controllers/contact.controller.js";
 import { initScheduler } from "./lib/scheduler.js";
 
 dotenv.config();
@@ -28,9 +29,13 @@ app.get("/api/connection/status", (req, res) => {
 app.post("/api/automations", automationController.create);
 app.get("/api/automations", automationController.list);
 app.delete("/api/automations/:id", automationController.delete);
-
 app.patch("/api/automations/:id/status", automationController.updateStatus);
 app.get("/api/automations/logs", automationController.getLogs);
+
+app.post("/api/contacts", contactController.create);
+app.get("/api/contacts", contactController.list);
+app.put("/api/contacts/:id", contactController.update);
+app.delete("/api/contacts/:id", contactController.delete);
 
 app.listen(PORT, async () => {
   logger.info(`Server running on port ${PORT}`);

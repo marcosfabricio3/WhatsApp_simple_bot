@@ -4,8 +4,8 @@ import makeWASocket, {
 } from "baileys";
 import qrcode from "qrcode-terminal";
 import logger from "./logger.js";
-import prisma from "./db.js";
 import { userPrismaAuthState } from "./prisma-auth.js";
+import prisma from "./prisma.js";
 
 let sock = null;
 
