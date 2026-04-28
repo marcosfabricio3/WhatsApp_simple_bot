@@ -1,5 +1,4 @@
 import makeWASocket, {
-  useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from "baileys";
@@ -8,14 +7,25 @@ import logger from "./logger.js";
 import prisma from "./db.js";
 import { userPrismaAuthState } from "./prisma-auth.js";
 
+let sock = null;
+
 export const connectionState = {
   status: "connecting",
   qr: null,
   lastUpdate: new Date(),
 };
 
+export const sendMessage = async (jid, text) => {
+  if (!sock || connectionState.status !== "connected") {
+    throw new Error(
+      "WhatsApp no esta conectado. no se puede enviar el mensaje.",
+    );
+  }
+  return await sock.sendMessage(jid, { text });
+};
+
 async function connectWhatsApp() {
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  const { version } = await fetchLatestBaileysVersion();
   logger.info(`Usando whatsApp v${version.join(".")}`);
 
   const defaultUser = await prisma.user.upsert({
@@ -29,12 +39,11 @@ async function connectWhatsApp() {
 
   const { state, saveCreds } = await userPrismaAuthState(defaultUser.id);
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     auth: state,
     version: version,
     printQRInTerminal: false,
     browser: ["Chrome", "Windows", "1.0.0"],
-    // print: (msg) => console.log(msg)s
   });
 
   sock.ev.on("connection.update", (update) => {

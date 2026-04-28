@@ -6,61 +6,144 @@ datasource db {
     provider = "sqlite"
 }
 
+//============================
+// MODELOS DE USUARIO Y SESION
+//============================
+
 model User {
     id               Int               @id @default(autoincrement())
     email            String            @unique
     password         String
+    createdAt        DateTime          @default(now()) @map("created_at")
+    updatedAt        DateTime          @updatedAt @map("updatedAt")
+
     automations      Automation[]
     triggers         Trigger[]
+    forwardRules     ForwardRule[]
+    contacts         Contact[]
+    templates        Template[]
+
+    settings         Settings?
     whatsappSession  WhatsAppSession?
-    createdAt        DateTime          @default(now())
-    updatedAt        DateTime          @updatedAt
-}
 
-model Automation {
-    id               Int            @id @default(autoincrement())
-    name             String
-    messageContent   String
-    recipients       String
-    scheduleType     String
-    scheduleValue    String
-    status           String         @default("active")
-    userId           Int
-    user             User           @relation(fields: [userId], references: [id])
-    executionLogs    ExecutionLog[]
-    createdAt        DateTime       @default(now())
-    updatedAt        DateTime       @updatedAt
-}
-
-model Trigger {
-    id               Int         @id @default(autoincrement())
-    keyword          String
-    matchMode        String
-    responseMessage  String
-    chatIds          String
-    cooldown         Int     @default(60)
-    userId           Int
-    user             User    @relation(fields: [userId], references: [id])
-    createdAt        DateTime @default(now())
-    updatedAt        DateTime @updatedAt
-}
-
-model ExecutionLog {
-    id             Int       @id @default(autoincrement())
-    automationId   Int
-    automation     Automation @relation(fields: [automationId], references: [id])
-    recipient      String
-    status         String
-    sentAt         DateTime?
-    errorMessage   String?
-    createdAt      DateTime  @default(now())
+    @@map("users")
 }
 
 model WhatsAppSession {
-    id           Int      @id @default(autoincrement())
-    userId       Int      @unique
-    user         User     @relation(fields: [userId], references: [id])
-    sessionData  Bytes
-    connectedAt  DateTime?
-    updatedAt    DateTime @updatedAt
+    id           Int        @id @default(autoincrement())
+    userId       Int        @unique @map("user_id")
+    user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    sessionData  Bytes      @map("session_data")
+    connectedAt  DateTime?  @map("connected_at")
+    updatedAt    DateTime   @updatedAt @map("updated_at")
+
+    @@map("whatsapp_sessions")
+}
+
+//============================
+//MODELOS DE AUTOMATIZACION
+//============================
+
+model Automation {
+    id               Int            @id @default(autoincrement())
+    userId           Int            @map("user_id")
+    user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name             String
+    messageContent   String         @map("message_content")
+    recipients       String
+    scheduleType     String         @map("scheduleType")
+    scheduleValue    String         @map("scheduleValue")
+    status           String         @default("active")
+    createdAt        DateTime       @default(now()) @map("created_at")
+    updatedAt        DateTime       @updatedAt @map("updatedAt")
+
+    executionLogs    ExecutionLog[]
+
+    @@map("automations")
+}
+
+model ExecutionLog {
+    id             Int        @id @default(autoincrement())
+    automationId   Int        @map("automation_id")
+    automation     Automation @relation(fields: [automationId], references: [id], onDelete: Cascade)
+    recipient      String
+    status         String
+    sentAt         DateTime?  @map("sentAt")
+    errorMessage   String?    @map("error_message")
+    createdAt      DateTime  @default(now()) @map("created_at")
+
+    @@map("execution_logs")
+}
+
+//==============================
+// MODELOS DE RESPUESTA Y REGLAS
+//==============================
+
+model Trigger {
+    id               Int         @id @default(autoincrement())
+    userId           Int         @map("user_id")
+    user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    keyword          String
+    matchMode        String      @default("exact") @map("match_mode")
+    responseMessage  String      @map("response_message")
+    chatIds          String      @map("chat_ids")
+    cooldown         Int         @default(60)
+    status           String      @default("active")
+    createdAt        DateTime    @default(now()) @map("created_at")
+    updatedAt        DateTime    @updatedAt @map("updated_at")
+
+    @@map("triggers")
+}
+
+model ForwardRule {
+    id                 Int         @id @default(autoincrement())
+    userId             Int         @map("user_id")
+    user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name               String
+    filterType         String      @map("filter_type")
+    filterValue        String      @map("filter_value")
+    destinationChatID  String      @map("destination_chat_id")
+    status             String      @default("active")
+    createdAt          DateTime    @default(now()) @map("created_at")
+    updatedAt          DateTime    @updatedAt @map("updated_at")
+
+    @@map("forward_rules")
+}
+
+//============================
+// AUXILIARES
+//============================
+
+model Contact {
+    id       Int       @id @default(autoincrement())
+    userId   Int       @map("user_id")
+    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    jid      String    @unique
+    name     String?
+    isGroup  Boolean   @default(false) @map("is_group")
+    photoUrl String?   @map("photo_url")
+
+    @@map("contacts")
+}
+
+model Template {
+    id            Int         @id @default(autoincrement())
+    userId        Int         @map("user_id")
+    user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name          String
+    content       String
+    createdAt     DateTime    @default(now()) @map("created_at")
+    updatedAt     DateTime    @updatedAt @map("updated_at")
+
+    @@map("templates")
+}
+
+model Settings {
+    id                Int         @id @default(autoincrement())
+    userId            Int         @unique @map("user_id")
+    user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    timezone          String      @default("UTC")
+    notificationSound Boolean     @default(true) @map("notification_sound")
+
+   @@map("settings") 
 }
