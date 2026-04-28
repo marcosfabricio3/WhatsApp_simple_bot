@@ -6,6 +6,10 @@ import connectWhatsApp, { connectionState } from "./lib/whatsapp.js";
 import { automationController } from "./controllers/automation.controller.js";
 import { contactController } from "./controllers/contact.controller.js";
 import { initScheduler } from "./lib/scheduler.js";
+import { templateController } from "./controllers/template.controller.js";
+import multer from "multer";
+
+const upload = multer({ dest: "uploads/" });
 
 dotenv.config();
 
@@ -36,6 +40,17 @@ app.post("/api/contacts", contactController.create);
 app.get("/api/contacts", contactController.list);
 app.put("/api/contacts/:id", contactController.update);
 app.delete("/api/contacts/:id", contactController.delete);
+
+app.post("/api/templates", templateController.create);
+app.get("/api/templates", templateController.list);
+app.put("/api/templates/:id", templateController.update);
+app.delete("/api/templates/:id", templateController.delete);
+
+app.post(
+  "/api/contacts/bulk",
+  upload.single("file"),
+  contactController.bulkImport,
+);
 
 app.listen(PORT, async () => {
   logger.info(`Server running on port ${PORT}`);

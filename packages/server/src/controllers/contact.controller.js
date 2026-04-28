@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { importService } from "../services/import.service.js";
 
 export const contactController = {
   async create(req, res) {
@@ -59,6 +60,24 @@ export const contactController = {
         where: { id: parseInt(id) },
       });
       res.json({ message: "Contacto eliminado correctamente" });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async bulkImport(req, res) {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ error: "No se ha subido ningun archivo" });
+      }
+      const summary = await importService.importContactsFromCsv(req.file.path);
+
+      res.json({
+        message: "Importacion masiva completada",
+        summary,
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
