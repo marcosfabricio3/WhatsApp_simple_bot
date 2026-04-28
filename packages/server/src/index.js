@@ -29,6 +29,9 @@ app.post("/api/automations", automationController.create);
 app.get("/api/automations", automationController.list);
 app.delete("/api/automations/:id", automationController.delete);
 
+app.patch("/api/automations/:id/status", automationController.updateStatus);
+app.get("/api/automations/logs", automationController.getLogs);
+
 app.listen(PORT, async () => {
   logger.info(`Server running on port ${PORT}`);
 
