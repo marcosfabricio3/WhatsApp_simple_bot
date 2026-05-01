@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ContactsView from './views/ContactsView';
 import TemplatesView from './views/TemplatesView';
+import TriggersView from './views/TriggersView';
+import BulkMessagesView from './views/BulkMessagesView';
 
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
@@ -12,11 +14,10 @@ function App() {
         return <ContactsView />;
       case 'plantillas':
         return <TemplatesView/>;
-      case 'automatizacion':
-        return <div className='card'>
-          <h3>Automatizacion</h3>
-          <p>Proximamente...</p>
-        </div>;
+      case 'respuestas':
+        return <TriggersView/>;
+      case 'envios':
+        return <BulkMessagesView />;
       case 'dashboard':
         return (
           <div className='card'>

@@ -74,6 +74,49 @@ async function connectWhatsApp() {
 
   sock.ev.on("creds.update", saveCreds);
 
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    if (type !== "notify") return;
+
+    for (const msg of messages) {
+      if (msg.key.fromMe) continue;
+
+      const messageText =
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        msg.message?.buttonsResponseMessage?.selectedButtonId;
+
+      if (!messageText) continue;
+
+      const remoteJid = msg.key.remoteJid;
+      const incomingText = messageText.toLowerCase().trim();
+
+      try {
+        const allTriggers = await prisma.trigger.findMany({
+          where: { status: "active" },
+        });
+
+        const matchedTrigger = allTriggers.find((t) => {
+          const keyword = t.keyword.toLowerCase();
+          return t.matchMode === "exact"
+            ? incomingText === keyword
+            : incomingText.includes(keyword);
+        });
+
+        if (matchedTrigger) {
+          logger.info(
+            `Auto-respondiedo a ${remoteJid} (Regla: ${matchedTrigger.keyword})`,
+          );
+
+          await sock.sendMessage(remoteJid, {
+            text: matchedTrigger.responseMessage,
+          });
+        }
+      } catch (error) {
+        logger.error("Error en el auto-respondedor:", error);
+      }
+    }
+  });
+
   return sock;
 }
 

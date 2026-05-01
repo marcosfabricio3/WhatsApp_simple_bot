@@ -7,6 +7,8 @@ import { automationController } from "./controllers/automation.controller.js";
 import { contactController } from "./controllers/contact.controller.js";
 import { initScheduler } from "./lib/scheduler.js";
 import { templateController } from "./controllers/template.controller.js";
+import { triggerController } from "./controllers/trigger.controller.js";
+import { automationController } from "./controllers/automation.controller.js";
 import multer from "multer";
 
 const upload = multer({ dest: "uploads/" });
@@ -45,6 +47,15 @@ app.post("/api/templates", templateController.create);
 app.get("/api/templates", templateController.list);
 app.put("/api/templates/:id", templateController.update);
 app.delete("/api/templates/:id", templateController.delete);
+
+app.post("/api/triggers", triggerController.create);
+app.get("/api/triggers", triggerController.list);
+app.delete("/api/triggers/:id", triggerController.delete);
+app.patch("/api/triggers/:id/status", triggerController.updateStatus);
+app.post("/api/automations", automationController.create);
+app.get("/api/automations", automationController.list);
+app.delete("/api/automations/:id", automationController.delete);
+app.get("/api/automations/logs", automationController.getLogs);
 
 app.post(
   "/api/contacts/bulk",

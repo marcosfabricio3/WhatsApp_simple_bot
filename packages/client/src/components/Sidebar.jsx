@@ -1,11 +1,13 @@
-import { Users, FileText, Send, Settings, LayoutDashboard } from "lucide-react";
+import { Users, FileText, Send, Settings, LayoutDashboard, Zap } from "lucide-react";
 
 const Sidebar = ({ onViewChange, activeView }) => {
     const menuItems = [
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
         { id: 'contactos', icon: <Users size={20} />, label: 'Contactos' },
         { id: 'plantillas', icon: <FileText size={20} />, label: 'Plantillas' },
-        { id: 'automatizacion', icon: <Send size={20}  />, label: 'Automatizacion' },
+        // { id: 'automatizacion', icon: <Send size={20}  />, label: 'Automatizacion' },
+        { id: 'respuestas', icon: <Zap size={20}  />, label: 'Auto-Respuestas' },
+        { id: 'envios', icon: <Send size={20}  />, label: 'Envios Masivos' },
     ];
 
     return (
