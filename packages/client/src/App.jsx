@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ContactsView from './views/ContactsView';
+import TemplatesView from './views/TemplatesView';
 
 function App() {
   const [activeView, setActiveView] = useState('dashboard');
@@ -9,8 +10,14 @@ function App() {
     switch (activeView) {
       case 'contactos':
         return <ContactsView />;
+      case 'plantillas':
+        return <TemplatesView/>;
+      case 'automatizacion':
+        return <div className='card'>
+          <h3>Automatizacion</h3>
+          <p>Proximamente...</p>
+        </div>;
       case 'dashboard':
-      default:
         return (
           <div className='card'>
             <h3>Estado del Sistema</h3>
@@ -27,7 +34,7 @@ function App() {
       
       <main className="main-content">
         <header className="content-header">
-          <h2>{activeView === 'contactos' ? 'Gestion de Contactos' : 'Dashboard'}</h2>
+          <h2 style={{textTransform: 'capitalize'}}>{activeView.replace('-', ' ')}</h2>
         </header>
         <section className="content-body">
           {renderView()}

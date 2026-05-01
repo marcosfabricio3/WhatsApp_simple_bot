@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Search, Trash2 } from 'lucide-react';
+import { UserPlus, Search, Trash2, Upload } from 'lucide-react';
 import Modal from '../components/Modal';
+
 
 const ContactsView = () => {
     const [contacts, setContacts] = useState([]);
@@ -26,13 +27,34 @@ const ContactsView = () => {
       });
       if (response.ok) {
         setIsModalOpen(false);
-        setFormData({ name: '', phone: '' });
+        setFormData({ name: '', jid: '' });
         fetchContacts();
       }
     } catch (err) {
       console.error("Error al guardar:", err);
     }
   };
+
+  const handleImport = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const response = await fetch('http://localhost:3001/api/contacts/bulk', {
+      method: 'POST',
+      body: formData,
+    });
+    if (response.ok) {
+      alert("¡Contactos importados con éxito!");
+      fetchContacts();
+    } else {
+      alert("Error al importar el archivo.");
+    }
+  } catch (err) {
+    console.error("Error en la importación:", err);
+  }
+};
 
   return (
     <div className="view-container">
@@ -41,10 +63,22 @@ const ContactsView = () => {
           <Search size={18} />
           <input type="text" placeholder="Buscar contacto..." />
         </div>
-        <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-          <UserPlus size={18} />
-          Nuevo Contacto
-        </button>
+        <div className='view-actions'>
+          <label className="btn-secondary">
+            <Upload size={18} />
+            Importar CSV
+            <input 
+              type="file" 
+              accept=".csv" 
+              onChange={handleImport} 
+              style={{ display: 'none' }} 
+            />
+          </label>
+          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+            <UserPlus size={18} />
+            Nuevo Contacto
+          </button>
+        </div>
       </div>
       <table className="data-table">
         <thead>

@@ -4,6 +4,8 @@ const Sidebar = ({ onViewChange, activeView }) => {
     const menuItems = [
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
         { id: 'contactos', icon: <Users size={20} />, label: 'Contactos' },
+        { id: 'plantillas', icon: <FileText size={20} />, label: 'Plantillas' },
+        { id: 'automatizacion', icon: <Send size={20}  />, label: 'Automatizacion' },
     ];
 
     return (

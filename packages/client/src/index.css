@@ -217,6 +217,30 @@ h1, h2, h3, h4 {
   border-left: 3px solid var(--primary); /* Una rayita verde a la izquierda */
 }
 
+.view-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.btn-secondary {
+  background-color: var(--surface-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: var(--border);
+  border-color: var(--text-muted);
+}
+
 /* ----------------------------------------------------------- */
 
 .modal-overlay {
