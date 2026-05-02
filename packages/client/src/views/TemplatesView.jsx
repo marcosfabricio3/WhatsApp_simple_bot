@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, Layout } from 'lucide-react';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 const TemplatesView = () => {
   const [templates, setTemplates] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', content: '' });
 
+  const { token } = useAuth();
+
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/templates');
+      const response = await fetch('http://localhost:3001/api/templates', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('No autorizado');
       const data = await response.json();
       setTemplates(data);
     } catch (err) {
@@ -24,7 +30,10 @@ const TemplatesView = () => {
     try {
       const response = await fetch('http://localhost:3001/api/templates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -68,7 +77,10 @@ const TemplatesView = () => {
                 className="btn-icon" 
                 onClick={async () => {
                   if(confirm('¿Borrar esta plantilla?')) {
-                    await fetch(`http://localhost:3001/api/templates/${template.id}`, { method: 'DELETE' });
+                    await fetch(`http://localhost:3001/api/templates/${template.id}`, { 
+                      method: 'DELETE',
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
                     fetchTemplates();
                   }
                 }}

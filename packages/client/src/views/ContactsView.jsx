@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { UserPlus, Search, Trash2, Upload } from 'lucide-react';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 
 const ContactsView = () => {
@@ -9,10 +10,19 @@ const ContactsView = () => {
 
     const [formData, setFormData] = useState({ name: '', jid: '' });
 
-    const fetchContacts = () => {
-    fetch('http://localhost:3001/api/contacts')
-      .then(res => res.json())
-      .then(data => setContacts(data));
+    const { token } = useAuth();
+
+    const fetchContacts = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/contacts', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('No autorizado');
+        const data = await res.json();
+        setContacts(data);
+      } catch (err) {
+        console.error("Error cargando contactos:", err);
+      }
   };
 
  
@@ -22,7 +32,10 @@ const ContactsView = () => {
     try {
       const response = await fetch('http://localhost:3001/api/contacts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -43,6 +56,7 @@ const ContactsView = () => {
   try {
     const response = await fetch('http://localhost:3001/api/contacts/bulk', {
       method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
     });
     if (response.ok) {

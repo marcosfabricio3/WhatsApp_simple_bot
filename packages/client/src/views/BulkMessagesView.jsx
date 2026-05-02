@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Send, Users, CheckSquare, Square, Calendar, Clock } from 'lucide-react';
-
+import { useAuth } from '../context/AuthContext';
 const BulkMessagesView = () => {
   const [contacts, setContacts] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -11,17 +11,24 @@ const BulkMessagesView = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
 
+  const { token, user } = useAuth();
+
   useEffect(() => {
     const loadData = async () => {
-      const [resC, resT] = await Promise.all([
-        fetch('http://localhost:3001/api/contacts'),
-        fetch('http://localhost:3001/api/templates')
-      ]);
-      setContacts(await resC.json());
-      setTemplates(await resT.json());
+      try {
+        const [resC, resT] = await Promise.all([
+          fetch('http://localhost:3001/api/contacts', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('http://localhost:3001/api/templates', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+        if (!resC.ok || !resT.ok) throw new Error('No autorizado');
+        setContacts(await resC.json());
+        setTemplates(await resT.json());
+      } catch (err) {
+        console.error("Error cargando datos:", err);
+      }
     };
-    loadData();
-  }, []);
+    if (token) loadData();
+  }, [token]);
 
   const toggleContact = (jid) => {
     const next = new Set(selectedJids);
@@ -53,13 +60,16 @@ const BulkMessagesView = () => {
       recipients: Array.from(selectedJids),
       scheduleType: scheduleType,
       scheduleValue: finalDate,
-      userId: 1
+      userId: user?.id || 1
     };
 
     try {
       const response = await fetch('http://localhost:3001/api/automations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload),
       });
 

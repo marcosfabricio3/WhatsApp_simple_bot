@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Zap, Plus, Trash2, MessageSquare, Play, Pause } from 'lucide-react';
 import Modal from '../components/Modal';
-
+import { useAuth } from '../context/AuthContext';
 const TriggersView = () => {
   const [triggers, setTriggers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,9 +11,14 @@ const TriggersView = () => {
     responseMessage: ''
   });
 
+  const { token } = useAuth();
+
   const fetchTriggers = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/triggers');
+      const response = await fetch('http://localhost:3001/api/triggers', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('No autorizado');
       const data = await response.json();
       setTriggers(data);
     } catch (err) {
@@ -26,7 +31,10 @@ const TriggersView = () => {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await fetch(`http://localhost:3001/api/triggers/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       fetchTriggers();
@@ -42,7 +50,10 @@ const TriggersView = () => {
     try {
       const response = await fetch('http://localhost:3001/api/triggers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(formData),
       });
       if (response.ok) {
@@ -100,7 +111,10 @@ const TriggersView = () => {
               className="btn-icon" 
               onClick={async () => {
                 if(confirm('¿Borrar esta regla?')) {
-                  await fetch(`http://localhost:3001/api/triggers/${trigger.id}`, { method: 'DELETE' });
+                  await fetch(`http://localhost:3001/api/triggers/${trigger.id}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
                   fetchTriggers();
                 }
               }}
