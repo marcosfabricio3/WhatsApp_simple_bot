@@ -5,9 +5,9 @@ export const contactController = {
   async create(req, res) {
     try {
       const { name, jid } = req.body;
+      const userId = req.user.userId;
 
       let finalJid = jid;
-
       if (!jid.includes("@s.whatsapp.net") && !jid.includes("@g.us")) {
         finalJid = `${jid}@s.whatsapp.net`;
       }
@@ -16,7 +16,7 @@ export const contactController = {
         data: {
           name,
           jid: finalJid,
-          userId: 1,
+          userId,
         },
       });
       res.json(contact);
@@ -27,8 +27,9 @@ export const contactController = {
 
   async list(req, res) {
     try {
+      const userId = req.user.userId;
       const contacts = await prisma.contact.findMany({
-        where: { userId: 1 },
+        where: { userId },
         orderBy: { name: "asc" },
       });
       res.json(contacts);
@@ -41,6 +42,13 @@ export const contactController = {
     try {
       const { id } = req.params;
       const { name, jid } = req.body;
+      const userId = req.user.userId;
+
+      const contact = await prisma.contact.findFirst({
+        where: { id: parseInt(id), userId }
+      });
+
+      if (!contact) return res.status(404).json({ error: "Contacto no encontrado" });
 
       const updated = await prisma.contact.update({
         where: { id: parseInt(id) },
@@ -55,6 +63,13 @@ export const contactController = {
   async delete(req, res) {
     try {
       const { id } = req.params;
+      const userId = req.user.userId;
+
+      const contact = await prisma.contact.findFirst({
+        where: { id: parseInt(id), userId }
+      });
+
+      if (!contact) return res.status(404).json({ error: "Contacto no encontrado" });
 
       await prisma.contact.delete({
         where: { id: parseInt(id) },
@@ -68,11 +83,10 @@ export const contactController = {
   async bulkImport(req, res) {
     try {
       if (!req.file) {
-        return res
-          .status(400)
-          .json({ error: "No se ha subido ningun archivo" });
+        return res.status(400).json({ error: "No se ha subido ningun archivo" });
       }
-      const summary = await importService.importContactsFromCsv(req.file.path);
+      const userId = req.user.userId;
+      const summary = await importService.importContactsFromCsv(req.file.path, userId);
 
       res.json({
         message: "Importacion masiva completada",

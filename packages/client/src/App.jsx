@@ -4,6 +4,7 @@ import ContactsView from './views/ContactsView';
 import TemplatesView from './views/TemplatesView';
 import TriggersView from './views/TriggersView';
 import BulkMessagesView from './views/BulkMessagesView';
+import WhatsAppView from './views/WhatsAppView';
 import LoginView from './views/LoginView';
 import { useAuth } from './context/AuthContext';
 import { LogOut, Loader2 } from 'lucide-react';
@@ -34,11 +35,16 @@ function App() {
         return <TriggersView/>;
       case 'envios':
         return <BulkMessagesView />;
+      case 'conexion':
+        return <WhatsAppView />;
       case 'dashboard':
         return (
           <div className='card'>
             <h3>Bienvenido, {user?.email}</h3>
-            <p>Estado del Sistema: <span style={{color: '#00b894'}}>Conectado a WhatsApp</span></p>
+            <p>Estado del Sistema: <span style={{color: '#00b894'}}>Activo</span></p>
+            <p style={{marginTop: '10px', fontSize: '0.9rem', opacity: 0.8}}>
+              Recuerda verificar tu conexión en la pestaña "Conexión".
+            </p>
           </div>
         );
         default: return null;

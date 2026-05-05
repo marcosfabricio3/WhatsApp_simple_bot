@@ -1,12 +1,11 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "../lib/prisma.js";
 
 export const triggerController = {
-  // Listar todos los triggers
   list: async (req, res) => {
     try {
+      const userId = req.user.userId;
       const triggers = await prisma.trigger.findMany({
-        where: { userId: 1 }, // Por ahora hardcoded al usuario 1
+        where: { userId },
       });
       res.json(triggers);
     } catch (error) {
@@ -14,13 +13,13 @@ export const triggerController = {
     }
   },
 
-  // Crear un nuevo trigger
   create: async (req, res) => {
     try {
       const { keyword, matchMode, responseMessage, chatIds } = req.body;
+      const userId = req.user.userId;
       const newTrigger = await prisma.trigger.create({
         data: {
-          userId: 1,
+          userId,
           keyword,
           matchMode: matchMode || "exact",
           responseMessage,
@@ -34,10 +33,18 @@ export const triggerController = {
     }
   },
 
-  // Eliminar un trigger
   delete: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.userId;
+
+      const existing = await prisma.trigger.findFirst({
+        where: { id: parseInt(id), userId },
+      });
+
+      if (!existing)
+        return res.status(404).json({ error: "Trigger no encontrado" });
+
       await prisma.trigger.delete({
         where: { id: parseInt(id) },
       });
@@ -51,6 +58,15 @@ export const triggerController = {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      const userId = req.user.userId;
+
+      const existing = await prisma.trigger.findFirst({
+        where: { id: parseInt(id), userId },
+      });
+
+      if (!existing)
+        return res.status(404).json({ error: "Trigger no encontrado" });
+
       const updated = await prisma.trigger.update({
         where: { id: parseInt(id) },
         data: { status },

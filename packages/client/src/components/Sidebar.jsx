@@ -5,9 +5,9 @@ const Sidebar = ({ onViewChange, activeView }) => {
         { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
         { id: 'contactos', icon: <Users size={20} />, label: 'Contactos' },
         { id: 'plantillas', icon: <FileText size={20} />, label: 'Plantillas' },
-        // { id: 'automatizacion', icon: <Send size={20}  />, label: 'Automatizacion' },
         { id: 'respuestas', icon: <Zap size={20}  />, label: 'Auto-Respuestas' },
         { id: 'envios', icon: <Send size={20}  />, label: 'Envios Masivos' },
+        { id: 'conexion', icon: <Settings size={20} />, label: 'Conexión' },
     ];
 
     return (

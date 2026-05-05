@@ -1,105 +1,108 @@
-import logger from "../lib/logger.js";
 import prisma from "../lib/prisma.js";
+import { scheduleJob, stopJob } from "../lib/scheduler.js";
+import logger from "../lib/logger.js";
 
 export const automationController = {
-  async create(req, res) {
+  create: async (req, res) => {
     try {
-      const {
-        name,
-        messageContent,
-        recipients,
-        scheduleType,
-        scheduleValue,
-        userId,
-      } = req.body;
-
-      if (
-        !name ||
-        !messageContent ||
-        !recipients ||
-        !scheduleType ||
-        !scheduleValue ||
-        !userId
-      ) {
-        return res.status(400).json({ error: "Faltan campos obligatorios" });
-      }
+      const { name, messageContent, recipients, scheduleType, scheduleValue } =
+        req.body;
+      const userId = req.user.userId;
 
       const automation = await prisma.automation.create({
         data: {
           name,
           messageContent,
-          recipients: JSON.stringify(recipients),
+          recipients,
           scheduleType,
           scheduleValue,
-          userId: userId || 1,
+          userId,
         },
       });
 
-      logger.info(`Automatizacion creada: ${name}`);
+      scheduleJob(automation);
+
       res.status(201).json(automation);
     } catch (error) {
-      logger.error("Error al crear automatizacion:", error);
-      res.status(500).json({ error: "Error interno del servidor" });
+      logger.error("Error al crear automatización:", error);
+      res.status(500).json({ error: "Error al crear automatización" });
     }
   },
 
-  async list(req, res) {
+  list: async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId) || 1;
       const automations = await prisma.automation.findMany({
-        where: { userId },
+        where: { userId: req.user.userId },
         orderBy: { createdAt: "desc" },
       });
-      const formatted = automations.map((a) => ({
-        ...a,
-        recipients: JSON.parse(a.recipients),
-      }));
-
-      res.json(formatted);
+      res.json(automations);
     } catch (error) {
-      logger.error("Error al listar automatizaciones:", error);
-      res.status(500).json({ error: "Error interno del servidor" });
+      res.status(500).json({ error: "Error al listar automatizaciones" });
     }
   },
 
-  async delete(req, res) {
-    try {
-      const { id } = req.params;
-      await prisma.automation.delete({
-        where: { id: parseInt(id) },
-      });
-      res.json({ message: "Automatizacion eliminada" });
-    } catch (error) {
-      logger.error("Error al eliminar automatizacion:", error);
-      res.status(500).json({ error: "Error interno del servidor" });
-    }
-  },
-
-  async updateStatus(req, res) {
+  updateStatus: async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
+      const userId = req.user.userId;
+
+      const existing = await prisma.automation.findFirst({
+        where: { id: parseInt(id), userId },
+      });
+
+      if (!existing) return res.status(404).json({ error: "No encontrada" });
+
       const updated = await prisma.automation.update({
         where: { id: parseInt(id) },
         data: { status },
       });
+
+      if (status === "active") {
+        scheduleJob(updated);
+      } else {
+        stopJob(updated.id);
+      }
+
       res.json(updated);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Error al actualizar estado" });
     }
   },
 
-  async getLogs(req, res) {
+  delete: async (req, res) => {
     try {
-      const { automationId } = req.query;
+      const { id } = req.params;
+      const userId = req.user.userId;
+
+      const existing = await prisma.automation.findFirst({
+        where: { id: parseInt(id), userId },
+      });
+
+      if (!existing) return res.status(404).json({ error: "No encontrada" });
+
+      stopJob(parseInt(id));
+      await prisma.automation.delete({ where: { id: parseInt(id) } });
+
+      res.json({ message: "Eliminada correctamente" });
+    } catch (error) {
+      res.status(500).json({ error: "Error al eliminar" });
+    }
+  },
+
+  getLogs: async (req, res) => {
+    try {
       const logs = await prisma.executionLog.findMany({
-        where: automationId ? { automationId: parseInt(automationId) } : {},
-        orderBy: { sentAt: "desc" },
+        where: {
+          automation: { userId: req.user.userId },
+        },
+        include: { automation: true },
+        orderBy: { createdAt: "desc" },
         take: 50,
       });
       res.json(logs);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Error al obtener logs" });
     }
   },
 };

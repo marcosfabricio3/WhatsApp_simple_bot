@@ -2,74 +2,80 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
 } from "baileys";
-import qrcode from "qrcode-terminal";
 import logger from "./logger.js";
 import { userPrismaAuthState } from "./prisma-auth.js";
 import prisma from "./prisma.js";
 
-let sock = null;
+const sessions = new Map();
 
-export const connectionState = {
-  status: "connecting",
-  qr: null,
-  lastUpdate: new Date(),
-};
-
-export const sendMessage = async (jid, text) => {
-  if (!sock || connectionState.status !== "connected") {
-    throw new Error(
-      "WhatsApp no esta conectado. no se puede enviar el mensaje.",
-    );
+export async function connectWhatsApp(userId) {
+  if (
+    sessions.has(userId) &&
+    (sessions.get(userId).status === "connected" ||
+      sessions.get(userId).status === "connecting")
+  ) {
+    return sessions.get(userId).sock;
   }
-  return await sock.sendMessage(jid, { text });
-};
 
-async function connectWhatsApp() {
-  const { version } = await fetchLatestBaileysVersion();
-  logger.info(`Usando whatsApp v${version.join(".")}`);
+  logger.info(`Iniciando conexión de WhatsApp para usuario ${userId}`);
 
-  const defaultUser = await prisma.user.upsert({
-    where: { email: "admin@test.com" },
-    update: {},
-    create: {
-      email: "admin@test.com",
-      password: "password_segura_temporal",
-    },
+  sessions.set(userId, {
+    status: "connecting",
+    qr: null,
+    sock: null,
   });
 
-  const { state, saveCreds } = await userPrismaAuthState(defaultUser.id);
+  logger.info(`Cargando sesión previa para usuario ${userId}`);
+  const { state, saveCreds } = await userPrismaAuthState(userId);
 
-  sock = makeWASocket({
+  logger.info(`Inicializando socket para usuario ${userId}`);
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  logger.info(
+    `Usando versión de WhatsApp: ${version.join(".")} (Latest: ${isLatest})`,
+  );
+
+  const sock = makeWASocket({
     auth: state,
-    version: version,
+    version,
     printQRInTerminal: false,
-    browser: ["Chrome", "Windows", "1.0.0"],
+    browser: ["Ubuntu", "Chrome", "20.0.0463.0"],
   });
+
+  const userSession = sessions.get(userId);
+  userSession.sock = sock;
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
+    const userSession = sessions.get(userId);
+    if (!userSession) return;
 
     if (qr) {
-      connectionState.qr = qr;
-      connectionState.status = "qr_ready";
-      qrcode.generate(qr, { small: true });
-      logger.info("Nuevo codigo QR generado");
+      userSession.qr = qr;
+      userSession.status = "qr_ready";
+      logger.info(`Nuevo QR generado para usuario ${userId}`);
     }
 
     if (connection === "close") {
-      const shouldReconnect =
-        lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      connectionState.status = "disconnected";
-      logger.error("Conexion cerrada. Reconectando:", shouldReconnect);
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+      userSession.status = "disconnected";
+      userSession.qr = null;
+
+      logger.error(
+        `Conexión cerrada para usuario ${userId}. Status: ${statusCode}. Reconectando: ${shouldReconnect}`,
+      );
+
       if (shouldReconnect) {
-        connectWhatsApp();
+        connectWhatsApp(userId);
+      } else {
+        sessions.delete(userId);
       }
     } else if (connection === "open") {
-      connectionState.status = "connected";
-      connectionState.qr = null;
-      logger.info("coneccion de WhatsApp abierta con exito!");
+      userSession.status = "connected";
+      userSession.qr = null;
+      logger.info(`¡WhatsApp conectado exitosamente para usuario ${userId}!`);
     }
-    connectionState.lastUpdate = new Date();
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -81,21 +87,21 @@ async function connectWhatsApp() {
       if (msg.key.fromMe) continue;
 
       const messageText =
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        msg.message?.buttonsResponseMessage?.selectedButtonId;
-
+        msg.message?.conversation || msg.message?.extendedTextMessage?.text;
       if (!messageText) continue;
 
       const remoteJid = msg.key.remoteJid;
       const incomingText = messageText.toLowerCase().trim();
 
       try {
-        const allTriggers = await prisma.trigger.findMany({
-          where: { status: "active" },
+        const userTriggers = await prisma.trigger.findMany({
+          where: {
+            userId: userId,
+            status: "active",
+          },
         });
 
-        const matchedTrigger = allTriggers.find((t) => {
+        const matchedTrigger = userTriggers.find((t) => {
           const keyword = t.keyword.toLowerCase();
           return t.matchMode === "exact"
             ? incomingText === keyword
@@ -104,20 +110,63 @@ async function connectWhatsApp() {
 
         if (matchedTrigger) {
           logger.info(
-            `Auto-respondiedo a ${remoteJid} (Regla: ${matchedTrigger.keyword})`,
+            `Auto-respondiendo a ${remoteJid} para usuario ${userId}`,
           );
-
           await sock.sendMessage(remoteJid, {
             text: matchedTrigger.responseMessage,
           });
         }
       } catch (error) {
-        logger.error("Error en el auto-respondedor:", error);
+        logger.error(`Error en auto-respondedor de usuario ${userId}:`, error);
       }
     }
   });
 
   return sock;
 }
+
+export const getSessionStatus = (userId) => {
+  const session = sessions.get(userId);
+  if (!session) return { status: "disconnected", qr: null };
+
+  return {
+    status: session.status,
+    qr: session.qr,
+  };
+};
+
+export const getSessionSock = (userId) => {
+  const session = sessions.get(userId);
+  return session?.status === "connected" ? session.sock : null;
+};
+
+export const logoutSession = async (userId) => {
+  const session = sessions.get(userId);
+  if (session?.sock) {
+    await session.sock.logout();
+    sessions.delete(userId);
+  }
+};
+
+export const loadAllSessions = async () => {
+  try {
+    const allSessions = await prisma.whatsAppSession.findMany({
+      select: { userId: true },
+    });
+
+    logger.info(`Cargando ${allSessions.length} sesiones de WhatsApp...`);
+
+    for (const session of allSessions) {
+      connectWhatsApp(session.userId).catch((err) => {
+        logger.error(
+          `Error reconectando sesión de usuario ${session.userId}:`,
+          err,
+        );
+      });
+    }
+  } catch (error) {
+    logger.error("Error al cargar sesiones iniciales:", error);
+  }
+};
 
 export default connectWhatsApp;
