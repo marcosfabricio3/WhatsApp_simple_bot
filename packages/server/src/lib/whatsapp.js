@@ -19,10 +19,14 @@ export async function connectWhatsApp(userId) {
 
   logger.info(`Iniciando conexión de WhatsApp para usuario ${userId}`);
 
+  // Almacén manual de contactos para este usuario
+  const contactStore = {};
+
   sessions.set(userId, {
     status: "connecting",
     qr: null,
     sock: null,
+    contacts: contactStore,
   });
 
   logger.info(`Cargando sesión previa para usuario ${userId}`);
@@ -44,10 +48,30 @@ export async function connectWhatsApp(userId) {
   const userSession = sessions.get(userId);
   userSession.sock = sock;
 
+  // Escuchar eventos de contactos para llenar nuestro almacén manual
+  sock.ev.on("contacts.upsert", (newContacts) => {
+    for (const contact of newContacts) {
+      userSession.contacts[contact.id] = {
+        ...(userSession.contacts[contact.id] || {}),
+        ...contact,
+      };
+    }
+  });
+
+  sock.ev.on("contacts.update", (updates) => {
+    for (const update of updates) {
+      if (userSession.contacts[update.id]) {
+        Object.assign(userSession.contacts[update.id], update);
+      }
+    }
+  });
+
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
     const userSession = sessions.get(userId);
     if (!userSession) return;
+
+    logger.info(`Update de conexión para usuario ${userId}: ${JSON.stringify({ connection, hasQr: !!qr })}`);
 
     if (qr) {
       userSession.qr = qr;
@@ -140,11 +164,26 @@ export const getSessionSock = (userId) => {
   return session?.status === "connected" ? session.sock : null;
 };
 
+export const getSessionStore = (userId) => {
+  const session = sessions.get(userId);
+  return session?.contacts || null;
+};
+
 export const logoutSession = async (userId) => {
   const session = sessions.get(userId);
-  if (session?.sock) {
-    await session.sock.logout();
+
+  try {
+    if (session?.sock) {
+      await session.sock.logout().catch(() => {});
+    }
+  } catch (error) {
+    logger.error(`Error al cerrar socket para usuario ${userId}:`, error);
+  } finally {
     sessions.delete(userId);
+    await prisma.whatsAppSession.deleteMany({
+      where: { userId },
+    });
+    logger.info(`Sesión de WhatsApp eliminada para usuario ${userId}`);
   }
 };
 

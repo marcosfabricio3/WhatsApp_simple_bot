@@ -150,10 +150,10 @@ const WhatsAppView = () => {
                         </button>
                     )}
 
-                    {status.status === 'connected' && (
+                    {(status.status === 'connected' || status.status === 'qr_ready' || status.status === 'connecting' || status.status === 'error') && (
                         <button className="btn-secondary" onClick={handleLogout} disabled={loading} style={{ borderColor: '#ff7675', color: '#ff7675' }}>
                             <LogOut size={20}/>
-                            Desconectar cuenta
+                            {status.status === 'connected' ? 'Desconectar cuenta' : 'Reiniciar sesión'}
                         </button>
                     )}
 

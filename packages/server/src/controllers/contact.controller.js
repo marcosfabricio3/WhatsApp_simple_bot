@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma.js";
 import { importService } from "../services/import.service.js";
+import { getSessionStore, getSessionStatus } from "../lib/whatsapp.js";
 
 export const contactController = {
   async create(req, res) {
@@ -90,6 +91,58 @@ export const contactController = {
 
       res.json({
         message: "Importacion masiva completada",
+        summary,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
+  async importFromWhatsApp(req, res) {
+    try {
+      const userId = req.user.userId;
+      const status = getSessionStatus(userId);
+
+      if (status.status !== "connected") {
+        return res.status(400).json({ error: "WhatsApp no está conectado" });
+      }
+
+      const contacts = getSessionStore(userId);
+      if (!contacts) {
+        return res.status(500).json({ error: "No se pudo acceder al almacén de contactos" });
+      }
+
+      const waContacts = Object.values(contacts);
+      const summary = { imported: 0, errors: 0 };
+
+      for (const contact of waContacts) {
+        const { id: jid, name, notify, verifiedName } = contact;
+
+        // Intentar obtener el nombre más descriptivo
+        const finalName = name || verifiedName || notify || jid.split("@")[0];
+
+        try {
+          await prisma.contact.upsert({
+            where: { jid },
+            update: { 
+              name: finalName,
+              isGroup: jid.endsWith("@g.us")
+            },
+            create: {
+              name: finalName,
+              jid,
+              userId,
+              isGroup: jid.endsWith("@g.us")
+            },
+          });
+          summary.imported++;
+        } catch (err) {
+          summary.errors++;
+        }
+      }
+
+      res.json({
+        message: "Importación desde WhatsApp completada",
         summary,
       });
     } catch (error) {

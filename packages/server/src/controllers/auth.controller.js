@@ -46,9 +46,14 @@ export const authController = {
         return res.status(401).json({ error: "Credenciales inválidas" });
       }
 
+      if (!process.env.JWT_SECRET) {
+        logger.error("JWT_SECRET no está definido en las variables de entorno");
+        return res.status(500).json({ error: "Error de configuración del servidor" });
+      }
+
       const token = jwt.sign(
         { userId: user.id, email: user.email },
-        process.env.JWT_SECRET || "clave_secreta_provisional",
+        process.env.JWT_SECRET,
         { expiresIn: "24h" },
       );
 

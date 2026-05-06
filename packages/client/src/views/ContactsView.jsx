@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Search, Trash2, Upload } from 'lucide-react';
+import { UserPlus, Search, Trash2, Upload, RefreshCw } from 'lucide-react';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 const ContactsView = () => {
     const [contacts, setContacts] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
 
     const [formData, setFormData] = useState({ name: '', jid: '' });
 
@@ -49,26 +50,51 @@ const ContactsView = () => {
   };
 
   const handleImport = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const formData = new FormData();
-  formData.append('file', file);
-  try {
-    const response = await fetch('http://localhost:3001/api/contacts/bulk', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData,
-    });
-    if (response.ok) {
-      alert("¡Contactos importados con éxito!");
-      fetchContacts();
-    } else {
-      alert("Error al importar el archivo.");
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const response = await fetch('http://localhost:3001/api/contacts/bulk', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+      if (response.ok) {
+        alert("¡Contactos importados con éxito!");
+        fetchContacts();
+      } else {
+        alert("Error al importar el archivo.");
+      }
+    } catch (err) {
+      console.error("Error en la importación:", err);
     }
-  } catch (err) {
-    console.error("Error en la importación:", err);
-  }
-};
+  };
+
+  const handleWhatsAppImport = async () => {
+    if (!confirm("¿Deseas importar todos los contactos desde tu WhatsApp conectado?")) return;
+    
+    setIsImporting(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/contacts/import-whatsapp', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`¡Éxito! Se importaron ${data.summary.imported} contactos.`);
+        fetchContacts();
+      } else {
+        alert(data.error || "Error al importar desde WhatsApp.");
+      }
+    } catch (err) {
+      console.error("Error en la importación de WhatsApp:", err);
+      alert("Error de conexión con el servidor.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   return (
     <div className="view-container">
@@ -78,9 +104,17 @@ const ContactsView = () => {
           <input type="text" placeholder="Buscar contacto..." />
         </div>
         <div className='view-actions'>
+          <button 
+            className="btn-secondary" 
+            onClick={handleWhatsAppImport}
+            disabled={isImporting}
+          >
+            <RefreshCw size={18} className={isImporting ? 'animate-spin' : ''} />
+            {isImporting ? 'Importando...' : 'Desde WhatsApp'}
+          </button>
           <label className="btn-secondary">
             <Upload size={18} />
-            Importar CSV
+            CSV
             <input 
               type="file" 
               accept=".csv" 
@@ -90,7 +124,7 @@ const ContactsView = () => {
           </label>
           <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
             <UserPlus size={18} />
-            Nuevo Contacto
+            Nuevo
           </button>
         </div>
       </div>

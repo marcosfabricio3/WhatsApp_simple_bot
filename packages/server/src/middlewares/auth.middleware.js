@@ -12,10 +12,15 @@ export const authMiddleware = (req, res, next) => {
 
   const token = authHeader.split(" ")[1];
 
+  if (!process.env.JWT_SECRET) {
+    logger.error("JWT_SECRET no está definido en las variables de entorno");
+    return res.status(500).json({ error: "Error de configuración del servidor" });
+  }
+
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_SECRET || "clave_secreta_provisional",
+      process.env.JWT_SECRET,
     );
 
     req.user = decoded;
