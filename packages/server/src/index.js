@@ -16,6 +16,12 @@ import { templateController } from "./controllers/template.controller.js";
 import { triggerController } from "./controllers/trigger.controller.js";
 import { authController } from "./controllers/auth.controller.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
+import { validate } from "./middlewares/validate.middleware.js";
+import { registerSchema, loginSchema } from "./schemas/auth.schema.js";
+import { automationSchema, updateAutomationStatusSchema } from "./schemas/automation.schema.js";
+import { contactSchema } from "./schemas/contact.schema.js";
+import { templateSchema } from "./schemas/template.schema.js";
+import { triggerSchema, updateTriggerStatusSchema } from "./schemas/trigger.schema.js";
 import multer from "multer";
 
 const upload = multer({ dest: "uploads/" });
@@ -65,8 +71,8 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.post("/api/auth/register", authController.register);
-app.post("/api/auth/login", authController.login);
+app.post("/api/auth/register", validate(registerSchema), authController.register);
+app.post("/api/auth/login", validate(loginSchema), authController.login);
 
 app.post("/api/connection/init", authMiddleware, async (req, res) => {
   try {
@@ -97,32 +103,34 @@ app.post("/api/connection/logout", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/api/automations", authMiddleware, automationController.create);
+app.post("/api/automations", authMiddleware, validate(automationSchema), automationController.create);
 app.get("/api/automations", authMiddleware, automationController.list);
 app.delete("/api/automations/:id", authMiddleware, automationController.delete);
 app.patch(
   "/api/automations/:id/status",
   authMiddleware,
+  validate(updateAutomationStatusSchema),
   automationController.updateStatus,
 );
 app.get("/api/automations/logs", authMiddleware, automationController.getLogs);
 
-app.post("/api/contacts", authMiddleware, contactController.create);
+app.post("/api/contacts", authMiddleware, validate(contactSchema), contactController.create);
 app.get("/api/contacts", authMiddleware, contactController.list);
-app.put("/api/contacts/:id", authMiddleware, contactController.update);
+app.put("/api/contacts/:id", authMiddleware, validate(contactSchema), contactController.update);
 app.delete("/api/contacts/:id", authMiddleware, contactController.delete);
 
-app.post("/api/templates", authMiddleware, templateController.create);
+app.post("/api/templates", authMiddleware, validate(templateSchema), templateController.create);
 app.get("/api/templates", authMiddleware, templateController.list);
-app.put("/api/templates/:id", authMiddleware, templateController.update);
+app.put("/api/templates/:id", authMiddleware, validate(templateSchema), templateController.update);
 app.delete("/api/templates/:id", authMiddleware, templateController.delete);
 
-app.post("/api/triggers", authMiddleware, triggerController.create);
+app.post("/api/triggers", authMiddleware, validate(triggerSchema), triggerController.create);
 app.get("/api/triggers", authMiddleware, triggerController.list);
 app.delete("/api/triggers/:id", authMiddleware, triggerController.delete);
 app.patch(
   "/api/triggers/:id/status",
   authMiddleware,
+  validate(updateTriggerStatusSchema),
   triggerController.updateStatus,
 );
 
