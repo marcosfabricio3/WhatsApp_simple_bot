@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 import logger from "./lib/logger.js";
 import {
   getSessionStatus,
@@ -38,8 +39,24 @@ process.on("unhandledRejection", (reason, promise) => {
   logger.error("CAPTURED UNHANDLED REJECTION:", reason);
 });
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  limit: 100, // Límite de 100 peticiones por IP en cada ventana de tiempo
+  message: { error: "Demasiadas peticiones desde esta IP, por favor intente más tarde." }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  limit: 10, // Límite de 10 peticiones de autenticación por IP
+  message: { error: "Demasiados intentos desde esta IP, por favor intente más tarde." }
+});
+
 app.use(cors());
 app.use(express.json());
+
+// Aplicar rate limiters
+app.use("/api/", apiLimiter);
+app.use("/api/auth", authLimiter);
 
 app.get("/api/health", (req, res) => {
   res.json({
